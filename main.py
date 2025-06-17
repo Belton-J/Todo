@@ -1,53 +1,57 @@
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+import uuid
+from sql import get_tasks, add_task, delete_task, update_task, complete_task
 
-app=FastAPI()
-TasksList=[]
+app = FastAPI()
 
+# Enable CORS for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 class Task(BaseModel):
-    id: int
-    text:str
-    status:bool
+    id: str
+    text: str
+    status: bool
 
-
-@app.post("/tasks")
-async def addTask(task:Task):
-    TasksList.append(task)
-    return {"msg":"Task Added Successfully"}
-
+class CreateTask(BaseModel):
+    text: str
 
 @app.get("/tasks")
-async def getTask():
-    if TasksList:
-        return {"list":TasksList}
+def read_tasks():
+    tasks = get_tasks()
+    if tasks:
+        return {"list": tasks}
     else:
-        return{"msg":"The list is empty"}
+        raise HTTPException(status_code=404,detail="No Task Found")
 
+@app.post("/tasks")
+def create_task(item: CreateTask):
+    task_id = str(uuid.uuid4())
+    success = add_task(task_id, item.text, False)
+    if success:
+        return {"msg": "Task created."}
+    raise HTTPException(status_code=500, detail="Task creation failed.")
 
-@app.delete("/tasks/{number}")
-async def deleteTask(number:int):
-    for i,tsk in enumerate(TasksList):
-        if tsk.id==number:
-            TasksList.pop(i)
-            return {"msg": "Task deleted successfully"}
-    raise HTTPException(status_code=404, detail="Task Not Found")
-
+@app.delete("/tasks/{task_id}")
+def delete(task_id: str):
+    if delete_task(task_id):
+        return {"msg": "Task deleted successfully."}
+    raise HTTPException(status_code=404, detail="Task not found.")
 
 @app.put("/tasks")
-async def puttext(etask:Task):
-    for i in TasksList:
-        if i.id==etask.id:
-            i.text=etask.text
-            return {"msg":"Task Changed Successfully"}
-    raise HTTPException(status_code=404,detail="Task Not Found")
+def update(item: Task):
+    if update_task(item.id, item.text):
+        return {"msg": "Task updated."}
+    raise HTTPException(status_code=404, detail="Task not found.")
 
-@app.put("/tasks/complete/{number}")
-async def comtext(number:int):
-    for i in TasksList:
-        if i.id==number:
-            i.status=True
-            return {"msg":"Task Completed"}
-    raise HTTPException(status_code=404,detail="Task Not Found")
-
-    
+@app.put("/tasks/complete/{task_id}")
+def complete(task_id: str):
+    if complete_task(task_id):
+        return {"msg": "Task status toggled."}
+    raise HTTPException(status_code=404, detail="Task not found.")
