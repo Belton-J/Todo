@@ -22,14 +22,4 @@ This full-stack app allows users to add, edit, delete, and complete tasks — al
 
 ---
 
-## 🗂️ Project Structure
 
-📦todo-app/
-├── main.py # FastAPI backend
-├── sql.py # SQLite database logic
-├── frontend.py # Streamlit user interface
-├── todo.db # SQLite database file (ignored by Git)
-├── .gitignore # Git ignore rules
-└── README.md # Project documentation
-
----
